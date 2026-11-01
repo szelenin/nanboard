@@ -44,6 +44,38 @@ apio build
 
 This replaces iCEcube2's "Run All" (synthesis, place & route, bitstream) and writes `_build/default/hardware.bin`.
 
+## Raspberry Pi (64-bit) differences
+
+Verified on: Raspberry Pi running Debian 13 (trixie), aarch64.
+
+**Apio does not work here.** Apio 1.6.0 only supports `darwin-arm64`, `linux-x86-64` and
+`windows-amd64`. `pipx install apio` succeeds, but `apio packages install` fails with
+`Error: Unknown platform id: [linux-aarch64]`.
+
+Instead, install the same tools Apio uses (YosysHQ OSS CAD Suite) directly. No sudo is needed:
+
+```bash
+mkdir -p ~/projects && cd ~/projects && git clone https://github.com/szelenin/nanboard.git
+# Pick the latest linux-arm64 asset from https://github.com/YosysHQ/oss-cad-suite-build/releases
+curl -fL -o /tmp/oss-cad-suite.tgz \
+  https://github.com/YosysHQ/oss-cad-suite-build/releases/download/2026-11-01/oss-cad-suite-linux-arm64-20261101.tgz
+tar -xzf /tmp/oss-cad-suite.tgz -C ~ && rm /tmp/oss-cad-suite.tgz
+```
+
+Build by running the same commands `apio build` runs on the Mac, after loading the suite into the shell:
+
+```bash
+source ~/oss-cad-suite/environment     # once per shell
+cd ~/projects/nanboard/project1-switches-leds
+mkdir -p _build
+yosys -q -p "synth_ice40 -top Switches_To_LEDs -json _build/hardware.json" Switches_To_LEDs.v
+nextpnr-ice40 -q --hx1k --package vq100 --pcf Go_Board_Constraints.pcf \
+  --json _build/hardware.json --asc _build/hardware.asc
+icepack _build/hardware.asc _build/hardware.bin
+```
+
+For another project, change `-top` to that project's top module and the `.v` file name.
+
 ## Starting a new project
 
 ```bash
